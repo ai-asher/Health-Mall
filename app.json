@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Health-Mall",
-    "slug": "Health-Mall",
+    "name": "Health Mall",
+    "slug": "health-mall",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,15 +10,17 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FF6A1A"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aiasher.healthmall"
     },
     "android": {
+      "package": "com.aiasher.healthmall",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FF6A1A"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
