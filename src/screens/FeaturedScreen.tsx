@@ -1,54 +1,166 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useRef, useState } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+  ViewToken,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from '../theme/colors';
+import { fontSize, weight } from '../theme/typography';
+import { videos, type Video } from '../mock/videos';
+import HeartButton from '../components/HeartButton';
+import PressableScale from '../components/PressableScale';
+
+const { width: W, height: H } = Dimensions.get('window');
+const ITEM_HEIGHT = H;
 
 const MODES = ['娱乐模式', '纯享模式'];
 
 export default function FeaturedScreen() {
+  const [active, setActive] = useState(0);
   const [mode, setMode] = useState(0);
+
+  const onViewable = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    if (viewableItems.length > 0 && viewableItems[0].index !== null) {
+      setActive(viewableItems[0].index);
+    }
+  });
 
   return (
     <View style={styles.container}>
-      <SafeAreaView edges={['top']} style={styles.headerWrap}>
+      <FlatList
+        data={videos}
+        keyExtractor={(v) => v.id}
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM_HEIGHT}
+        decelerationRate="fast"
+        renderItem={({ item, index }) => (
+          <VideoItem video={item} active={index === active} />
+        )}
+        onViewableItemsChanged={onViewable.current}
+        viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
+      />
+
+      <SafeAreaView edges={['top']} style={styles.headerWrap} pointerEvents="box-none">
         <View style={styles.modes}>
           {MODES.map((m, i) => (
-            <TouchableOpacity key={m} onPress={() => setMode(i)} style={styles.modeBtn}>
+            <PressableScale key={m} onPress={() => setMode(i)} style={styles.modeBtn}>
               <Text style={[styles.modeText, mode === i && styles.modeTextActive]}>{m}</Text>
               {mode === i && <View style={styles.modeIndicator} />}
-            </TouchableOpacity>
+            </PressableScale>
           ))}
         </View>
-        <TouchableOpacity style={styles.searchIcon}>
+        <PressableScale style={styles.searchIcon}>
           <Ionicons name="search" size={22} color={colors.white} />
-        </TouchableOpacity>
+        </PressableScale>
       </SafeAreaView>
+    </View>
+  );
+}
 
-      <View style={styles.videoArea}>
-        <View style={styles.videoPlaceholder}>
-          <Ionicons name="play-circle-outline" size={80} color="rgba(255,255,255,0.3)" />
-          <Text style={styles.videoHint}>视频内容占位</Text>
-        </View>
+function VideoItem({ video, active }: { video: Video; active: boolean }) {
+  const heartsRef = useRef<{ id: number; x: number; y: number }[]>([]);
+  const [hearts, setHearts] = useState<{ id: number; x: number; y: number }[]>([]);
 
-        <View style={styles.sideActions}>
-          <View style={styles.authorAvatar}>
-            <Ionicons name="person" size={18} color={colors.white} />
+  const spawnHeart = (x: number, y: number) => {
+    const id = Date.now() + Math.random();
+    heartsRef.current.push({ id, x, y });
+    setHearts((h) => [...h, { id, x, y }]);
+    setTimeout(() => {
+      heartsRef.current = heartsRef.current.filter((h) => h.id !== id);
+      setHearts((h) => h.filter((it) => it.id !== id));
+    }, 1400);
+  };
+
+  const lastTap = useSharedValue(0);
+
+  const tap = Gesture.Tap()
+    .maxDuration(250)
+    .onEnd((e) => {
+      const now = Date.now();
+      if (now - lastTap.value < 300) {
+        runOnJS(spawnHeart)(e.x, e.y);
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+      }
+      lastTap.value = now;
+    });
+
+  return (
+    <View style={{ width: W, height: ITEM_HEIGHT }}>
+      <LinearGradient
+        colors={video.bgGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <GestureDetector gesture={tap}>
+        <View style={styles.videoArea}>
+          <View style={styles.posterCenter}>
+            <Text style={styles.posterText}>{video.posterText}</Text>
+            <Text style={styles.posterSub}>{video.posterSubtext}</Text>
           </View>
-          <ActionItem icon="heart" label="19464" />
-          <ActionItem icon="chatbubble-ellipses" label="2" />
-          <ActionItem icon="star" label="7003" />
-          <ActionItem icon="logo-wechat" label="4936" color="#06C160" />
-          <TouchableOpacity style={styles.publishBtn}>
-            <Ionicons name="add" size={26} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.publishLabel}>发布</Text>
-        </View>
 
-        <View style={styles.subtitleArea}>
-          <Text style={styles.subtitle}>失眠的人看过来！</Text>
+          <LinearGradient
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.4)']}
+            style={styles.bottomFade}
+            pointerEvents="none"
+          />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.5)', 'rgba(0,0,0,0)']}
+            style={styles.topFade}
+            pointerEvents="none"
+          />
+
+          {hearts.map((h) => (
+            <FloatingHeart key={h.id} x={h.x} y={h.y} />
+          ))}
         </View>
+      </GestureDetector>
+
+      <View style={styles.sideActions}>
+        <View style={styles.authorCircle}>
+          <LinearGradient
+            colors={video.authorAvatar}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <Ionicons name="person" size={20} color={colors.white} />
+        </View>
+        <HeartButton initialCount={video.likes} />
+        <ActionItem icon="chatbubble-ellipses" label={String(video.comments)} />
+        <ActionItem icon="star-outline" label={video.collects.toLocaleString()} />
+        <ActionItem icon="logo-wechat" label={video.shares.toLocaleString()} color="#06C160" />
+        <PressableScale style={styles.publishBtn}>
+          <Ionicons name="add" size={26} color={colors.text} />
+        </PressableScale>
+        <Text style={styles.publishLabel}>发布</Text>
+      </View>
+
+      <View style={styles.subtitleArea}>
+        <Text style={styles.author}>@{video.author} · {video.authorTitle}</Text>
+        <Text style={styles.title}>{video.title}</Text>
+        <Text style={styles.subtitle}>{video.subtitle}</Text>
       </View>
     </View>
   );
@@ -56,10 +168,42 @@ export default function FeaturedScreen() {
 
 function ActionItem({ icon, label, color }: { icon: any; label: string; color?: string }) {
   return (
-    <TouchableOpacity style={styles.actionItem}>
+    <PressableScale style={styles.actionItem}>
       <Ionicons name={icon} size={32} color={color ?? colors.white} />
       <Text style={styles.actionLabel}>{label}</Text>
-    </TouchableOpacity>
+    </PressableScale>
+  );
+}
+
+function FloatingHeart({ x, y }: { x: number; y: number }) {
+  const op = useSharedValue(1);
+  const scale = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const rotate = useSharedValue((Math.random() - 0.5) * 60);
+
+  React.useEffect(() => {
+    scale.value = withSequence(
+      withTiming(1.6, { duration: 220, easing: Easing.out(Easing.back(2)) }),
+      withTiming(1, { duration: 120 }),
+    );
+    translateY.value = withTiming(-160, { duration: 1300, easing: Easing.out(Easing.cubic) });
+    op.value = withDelay(900, withTiming(0, { duration: 400 }));
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: op.value,
+    transform: [
+      { translateX: x - 40 },
+      { translateY: y - 40 + translateY.value },
+      { scale: scale.value },
+      { rotate: `${rotate.value}deg` },
+    ],
+  }));
+
+  return (
+    <Animated.View pointerEvents="none" style={[styles.floatingHeart, style]}>
+      <Ionicons name="heart" size={80} color={colors.like} />
+    </Animated.View>
   );
 }
 
@@ -70,7 +214,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 16,
@@ -79,7 +222,7 @@ const styles = StyleSheet.create({
   modes: { flex: 1, flexDirection: 'row', justifyContent: 'center' },
   modeBtn: { marginHorizontal: 18, alignItems: 'center', paddingVertical: 6 },
   modeText: { color: 'rgba(255,255,255,0.6)', fontSize: 16 },
-  modeTextActive: { color: colors.white, fontWeight: '700', fontSize: 17 },
+  modeTextActive: { color: colors.white, fontWeight: weight.bold, fontSize: 17 },
   modeIndicator: {
     marginTop: 4,
     width: 18,
@@ -88,25 +231,29 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
   searchIcon: { position: 'absolute', right: 16, bottom: 8 },
-  videoArea: { flex: 1, position: 'relative' },
-  videoPlaceholder: {
-    flex: 1,
-    backgroundColor: '#1A1A1A',
+  videoArea: { flex: 1 },
+  posterCenter: {
+    position: 'absolute',
+    top: '32%',
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  videoHint: { color: 'rgba(255,255,255,0.4)', marginTop: 12, fontSize: 14 },
+  posterText: { color: colors.white, fontSize: 64, fontWeight: weight.black, letterSpacing: 8 },
+  posterSub: { color: 'rgba(255,255,255,0.85)', fontSize: 18, marginTop: 8, letterSpacing: 4 },
+  bottomFade: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 200 },
+  topFade: { position: 'absolute', top: 0, left: 0, right: 0, height: 100 },
   sideActions: {
     position: 'absolute',
     right: 12,
-    bottom: 90,
+    bottom: 140,
     alignItems: 'center',
   },
-  authorAvatar: {
+  authorCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#A4C97A',
+    overflow: 'hidden',
     borderWidth: 2,
     borderColor: colors.white,
     alignItems: 'center',
@@ -125,6 +272,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   publishLabel: { color: colors.white, fontSize: 12, marginTop: 4 },
-  subtitleArea: { position: 'absolute', left: 16, bottom: 40 },
-  subtitle: { color: colors.white, fontSize: 16, fontWeight: '600' },
+  subtitleArea: { position: 'absolute', left: 16, bottom: 110, right: 80 },
+  author: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginBottom: 4 },
+  title: { color: colors.white, fontSize: 18, fontWeight: weight.bold, marginBottom: 2 },
+  subtitle: { color: 'rgba(255,255,255,0.85)', fontSize: 13, lineHeight: 18 },
+  floatingHeart: { position: 'absolute', width: 80, height: 80 },
 });

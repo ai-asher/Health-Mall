@@ -27,6 +27,18 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "58145747-d3fb-48c1-9f0c-a68ba80ca8a1"
+      }
+    },
+    "owner": "lucasbtc",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/58145747-d3fb-48c1-9f0c-a68ba80ca8a1"
     }
   }
 }

@@ -1,52 +1,70 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { colors } from '../theme/colors';
+import { fontSize, weight } from '../theme/typography';
+import { courses, courseCategories } from '../mock/courses';
+import Banner, { type BannerSlide } from '../components/Banner';
+import CourseCard from '../components/CourseCard';
+import PressableScale from '../components/PressableScale';
+import type { RootStackParamList } from '../navigation/RootStack';
 
 const TOP_TABS = ['名家讲堂', '学习中心', '医疗服务', '健康管理'];
-const CATEGORY_TABS = ['精选', '病症', '名家', '养生'];
 
-const COURSES = [
+const BANNERS: BannerSlide[] = [
   {
-    id: '1',
-    title: '九种体质养生',
-    desc: '知体质，辨健康，九种体质…',
-    publisher: '御君方名医堂',
-    likes: 3748,
-    accent: '#B83A2B',
+    id: 'b1',
+    title: '药食同源 茯苓粉',
+    subtitle: '湿气去一去 脾胃养一养 吃饭香精神旺',
+    cta: '养生常备',
+    gradient: ['#1F6E3E', '#3FA663'] as const,
+    posterText: '茯苓粉',
+    posterSubtext: '90g/盒',
   },
   {
-    id: '2',
-    title: '健康好油：甘油二酯油',
-    desc: '减少甘油三酯摄入，日常煎炒烹炸均可',
-    publisher: '中医健康达人',
-    likes: 643,
-    accent: '#5B3F8F',
+    id: 'b2',
+    title: '黄精阿胶黑芝麻丸',
+    subtitle: '九蒸九晒 匠心传承 营养高钙',
+    cta: '立即购买',
+    gradient: ['#1E40AF', '#3B82F6'] as const,
+    posterText: '阿胶丸',
+    posterSubtext: '54g/袋',
   },
   {
-    id: '3',
-    title: '芳华杯病例大赛',
-    desc: '首届"芳华杯"病例大赛全国总决赛',
-    publisher: '御君方互联网医院',
-    likes: 2104,
-    accent: '#1E3A8A',
+    id: 'b3',
+    title: '九种体质对症养',
+    subtitle: '名医开课 精准辨识体质',
+    cta: '免费学习',
+    gradient: ['#7F1D1D', '#DC2626'] as const,
+    posterText: '九体质',
+    posterSubtext: '中医精讲',
   },
   {
-    id: '4',
-    title: '星光贺岁 解锁新春',
-    desc: 'VIP 福气满屏 快来围观',
-    publisher: '中医健康达人',
-    likes: 8821,
-    accent: '#A21D26',
+    id: 'b4',
+    title: '24 节气养生',
+    subtitle: '顺应天时 未病先防',
+    cta: '观看课程',
+    gradient: ['#7C3AED', '#A855F7'] as const,
+    posterText: '节气养生',
+    posterSubtext: '4 季 24 课',
   },
 ];
 
 export default function HealthScreen() {
+  const nav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [topIdx, setTopIdx] = useState(0);
   const [catIdx, setCatIdx] = useState(0);
+
+  const filteredCourses = useMemo(() => {
+    const cat = courseCategories[catIdx];
+    return courses.filter((c) => c.category === cat);
+  }, [catIdx]);
 
   return (
     <View style={styles.container}>
@@ -58,12 +76,12 @@ export default function HealthScreen() {
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <View style={styles.topTabs}>
           {TOP_TABS.map((tab, i) => (
-            <TouchableOpacity key={tab} onPress={() => setTopIdx(i)} style={styles.topTab}>
+            <PressableScale key={tab} onPress={() => setTopIdx(i)} style={styles.topTab}>
               <Text style={[styles.topTabText, topIdx === i && styles.topTabTextActive]}>
                 {tab}
               </Text>
               {topIdx === i && <View style={styles.topTabIndicator} />}
-            </TouchableOpacity>
+            </PressableScale>
           ))}
         </View>
 
@@ -73,43 +91,38 @@ export default function HealthScreen() {
             <Text style={styles.searchPlaceholder}>搜索课程内容</Text>
           </View>
 
-          <LinearGradient
-            colors={['#1F6E3E', '#3FA663']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.banner}
-          >
-            <View style={styles.bannerLeft}>
-              <Text style={styles.bannerTitle}>药食同源 茯苓粉</Text>
-              <Text style={styles.bannerSub}>湿气去一去</Text>
-              <Text style={styles.bannerSub}>脾胃养一养</Text>
-              <Text style={styles.bannerSub}>吃饭香精神旺</Text>
-              <View style={styles.bannerCta}>
-                <Text style={styles.bannerCtaText}>养生常备 {'>>>'}</Text>
-              </View>
-            </View>
-            <View style={styles.bannerProductBox}>
-              <Text style={styles.bannerProductText}>茯苓粉</Text>
-            </View>
-          </LinearGradient>
+          <View style={{ marginTop: 14 }}>
+            <Banner slides={BANNERS} />
+          </View>
 
-          <View style={styles.bannerDots}>
-            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-              <View key={i} style={[styles.dot, i === 0 && styles.dotActive]} />
+          <View style={styles.quickRow}>
+            {[
+              { icon: 'medical', label: '在线问诊', color: colors.primary, action: () => nav.navigate('DoctorList') },
+              { icon: 'pulse', label: '健康数据', color: colors.like, action: () => nav.navigate('HealthData') },
+              { icon: 'storefront', label: '芳华商城', color: colors.success },
+              { icon: 'school', label: '名家讲堂', color: colors.info },
+              { icon: 'gift', label: '芳华兑换', color: colors.warning },
+            ].map((q) => (
+              <PressableScale key={q.label} onPress={q.action} style={styles.quickItem}>
+                <View style={[styles.quickIcon, { backgroundColor: `${q.color}22` }]}>
+                  <Ionicons name={q.icon as any} size={22} color={q.color} />
+                </View>
+                <Text style={styles.quickLabel}>{q.label}</Text>
+              </PressableScale>
             ))}
           </View>
 
           <View style={styles.sectionHead}>
             <Text style={styles.sectionTitle}>名医讲堂</Text>
-            <TouchableOpacity style={styles.moreRow}>
+            <PressableScale style={styles.moreRow}>
               <Text style={styles.more}>更多讲堂</Text>
               <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           <View style={styles.catTabs}>
-            {CATEGORY_TABS.map((c, i) => (
-              <TouchableOpacity
+            {courseCategories.map((c, i) => (
+              <PressableScale
                 key={c}
                 onPress={() => setCatIdx(i)}
                 style={[styles.catTab, catIdx === i && styles.catTabActive]}
@@ -117,29 +130,18 @@ export default function HealthScreen() {
                 <Text style={[styles.catTabText, catIdx === i && styles.catTabTextActive]}>
                   {c}
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
 
           <View style={styles.courseGrid}>
-            {COURSES.map((c) => (
-              <TouchableOpacity key={c.id} style={styles.courseCard}>
-                <View style={[styles.courseCover, { backgroundColor: c.accent }]}>
-                  <Text style={styles.courseCoverTitle}>{c.title}</Text>
-                  <View style={styles.playOverlay}>
-                    <Ionicons name="play" size={22} color={colors.white} />
-                  </View>
-                </View>
-                <Text style={styles.courseTitle} numberOfLines={1}>{c.title}</Text>
-                <Text style={styles.courseDesc} numberOfLines={1}>{c.desc}</Text>
-                <View style={styles.courseFoot}>
-                  <Text style={styles.coursePublisher} numberOfLines={1}>{c.publisher}</Text>
-                  <View style={styles.likeRow}>
-                    <Ionicons name="heart-outline" size={14} color={colors.textSecondary} />
-                    <Text style={styles.likeNum}>{c.likes}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
+            {filteredCourses.map((c, i) => (
+              <Animated.View key={c.id} entering={FadeInDown.delay(i * 60).duration(360)} style={{ width: '48%' }}>
+                <CourseCard
+                  course={c}
+                  onPress={() => nav.navigate('CourseDetail', { courseId: c.id })}
+                />
+              </Animated.View>
             ))}
           </View>
         </ScrollView>
@@ -152,8 +154,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   topTabs: { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   topTab: { marginRight: 20, paddingVertical: 8, alignItems: 'center' },
-  topTabText: { fontSize: 18, color: colors.text, fontWeight: '500' },
-  topTabTextActive: { color: colors.primary, fontWeight: '700', fontSize: 22 },
+  topTabText: { fontSize: 18, color: colors.text, fontWeight: weight.medium },
+  topTabTextActive: { color: colors.primary, fontWeight: weight.black, fontSize: 22 },
   topTabIndicator: {
     marginTop: 4,
     width: 24,
@@ -172,49 +174,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   searchPlaceholder: { marginLeft: 8, color: colors.textTertiary, fontSize: 14 },
-  banner: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 12,
-    padding: 18,
+  quickRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 160,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    justifyContent: 'space-between',
   },
-  bannerLeft: { flex: 1 },
-  bannerTitle: { fontSize: 22, fontWeight: '900', color: colors.white, marginBottom: 6 },
-  bannerSub: { fontSize: 14, color: colors.white, lineHeight: 20 },
-  bannerCta: {
-    marginTop: 10,
-    backgroundColor: '#FFB066',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  bannerCtaText: { color: colors.white, fontWeight: '700' },
-  bannerProductBox: {
-    width: 110,
-    height: 110,
-    borderRadius: 8,
-    backgroundColor: '#0F4D2A',
+  quickItem: { alignItems: 'center', flex: 1 },
+  quickIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bannerProductText: { color: '#F5C84B', fontWeight: '700', fontSize: 18 },
-  bannerDots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#D9DDE3',
-    marginHorizontal: 3,
-  },
-  dotActive: { width: 14, backgroundColor: colors.white },
+  quickLabel: { fontSize: 12, color: colors.text, marginTop: 6 },
   sectionHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -222,7 +196,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 18,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  sectionTitle: { fontSize: 18, fontWeight: weight.bold, color: colors.text },
   moreRow: { flexDirection: 'row', alignItems: 'center' },
   more: { fontSize: 13, color: colors.textSecondary, marginRight: 2 },
   catTabs: { flexDirection: 'row', paddingHorizontal: 12, marginTop: 12 },
@@ -234,7 +208,7 @@ const styles = StyleSheet.create({
   },
   catTabActive: { backgroundColor: colors.white },
   catTabText: { fontSize: 14, color: colors.text },
-  catTabTextActive: { color: colors.primary, fontWeight: '700' },
+  catTabTextActive: { color: colors.primary, fontWeight: weight.bold },
   courseGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -242,42 +216,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginTop: 10,
   },
-  courseCard: {
-    width: '48%',
-    backgroundColor: colors.white,
-    borderRadius: 10,
-    padding: 8,
-    marginBottom: 12,
-  },
-  courseCover: {
-    height: 120,
-    borderRadius: 8,
-    marginBottom: 8,
-    padding: 10,
-    justifyContent: 'flex-start',
-    overflow: 'hidden',
-  },
-  courseCoverTitle: { color: colors.white, fontWeight: '900', fontSize: 14 },
-  playOverlay: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  courseTitle: { fontSize: 14, fontWeight: '700', color: colors.text, marginTop: 2 },
-  courseDesc: { fontSize: 12, color: colors.textTertiary, marginTop: 2 },
-  courseFoot: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  coursePublisher: { fontSize: 12, color: colors.textSecondary, flex: 1 },
-  likeRow: { flexDirection: 'row', alignItems: 'center' },
-  likeNum: { fontSize: 12, color: colors.textSecondary, marginLeft: 4 },
 });
